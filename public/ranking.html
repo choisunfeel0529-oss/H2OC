@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>랭킹 - H2OC 계산기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-shell" id="ranking-screen">
+  <a href="/" class="back-btn" aria-label="처음으로" style="background:rgba(255,255,255,0.9);">←</a>
+
+  <div class="ranking-hero">
+    <div class="hero-tag">지금까지의 참여 현황</div>
+    <div class="hero-title heading-font" id="hero-summary">불러오는 중...</div>
+    <div class="ranking-columns">
+      <span>탄소(kg)</span>
+      <span>수자원(%)</span>
+    </div>
+  </div>
+
+  <div id="my-rank-section" style="display:none;">
+    <h2 class="section-label heading-font">내 랭킹</h2>
+    <div class="rank-list" id="my-rank-row"></div>
+  </div>
+
+  <h2 class="section-label heading-font">전체 랭킹 TOP 100</h2>
+  <div class="rank-list" id="rank-list">
+    <p class="loading-msg">랭킹을 불러오는 중...</p>
+  </div>
+
+  <p class="footer-link"><a href="/login">나도 계산하러 가기</a></p>
+</div>
+
+<script src="/static/data.js"></script>
+<script>
+(function () {
+  const myNickname = sessionStorage.getItem(SS_NICKNAME) || localStorage.getItem(LS_LAST_NICKNAME);
+
+  function badgeClass(rank) {
+    if (rank === 1) return 'gold';
+    if (rank === 2) return 'silver';
+    if (rank === 3) return 'bronze';
+    return '';
+  }
+
+  function renderRow(rank, row, isMe) {
+    const bClass = badgeClass(rank);
+    const carbon = Math.round((row.carbon_kg || 0) * 100) / 100;
+    const water = Math.round(row.water_percent || 0);
+    return (
+      '<div class="rank-row' + (isMe ? ' me' : '') + '">' +
+        '<div class="rank-badge' + (bClass ? ' ' + bClass : '') + '">' + rank + '</div>' +
+        '<div class="rank-nick">' + escapeHtml(row.nickname) + '</div>' +
+        '<div class="rank-metrics"><span>' + carbon + '</span><span>' + water + '</span></div>' +
+      '</div>'
+    );
+  }
+
+  async function load() {
+    const { summary, ranking } = await fetchRanking(100);
+
+    const heroEl = document.getElementById('hero-summary');
+    if (summary) {
+      heroEl.innerHTML =
+        '참여자 <strong>' + summary.participant_count + '명</strong>이<br>' +
+        '탄소 <strong>' + summary.total_carbon_kg + 'kg</strong>을 절감하고<br>' +
+        '평균 수자원 <strong>' + summary.avg_water_percent + '%</strong>를 절약했어요!';
+    } else {
+      heroEl.textContent = '아직 참여 데이터가 없어요.';
+    }
+
+    const listEl = document.getElementById('rank-list');
+    if (!ranking || ranking.length === 0) {
+      listEl.innerHTML = '<p class="empty-msg">아직 랭킹 데이터가 없습니다.<br>첫 번째 참여자가 되어보세요!</p>';
+    } else {
+      listEl.innerHTML = ranking.map(function (row, i) {
+        return renderRow(i + 1, row, myNickname && row.nickname === myNickname);
+      }).join('');
+    }
+
+    // 내 랭킹 (Top100 밖일 경우도 별도 조회)
+    if (myNickname) {
+      const my = await fetchMyRanking(myNickname);
+      const section = document.getElementById('my-rank-section');
+      const myRow = document.getElementById('my-rank-row');
+      if (my.found) {
+        section.style.display = '';
+        myRow.innerHTML = renderRow(my.rank, my.data, true);
+      }
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

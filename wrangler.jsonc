@@ -1,10 +1,17 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "h2oc-calculator",
   "compatibility_date": "2026-07-08",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
     "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "h2oc-calculator-production",
+      "database_id": "local-placeholder-id"
+    }
   ]
   // "vars": {
   //   "MY_VAR": "my-variable"

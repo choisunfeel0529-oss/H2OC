@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 - H2OC 계산기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="admin-shell">
+  <div class="admin-header">
+    <div class="admin-title heading-font">H2OC 관리자 데이터 조회</div>
+    <a href="/" class="footer-link">← 메인으로</a>
+  </div>
+
+  <div class="admin-summary" id="admin-summary">
+    <div class="stat-card"><div class="stat-label">참여자 수</div><div class="stat-value" id="s-count">-</div></div>
+    <div class="stat-card"><div class="stat-label">누적 탄소(kg)</div><div class="stat-value" id="s-carbon">-</div></div>
+    <div class="stat-card"><div class="stat-label">평균 수자원(%)</div><div class="stat-value" id="s-water">-</div></div>
+    <div class="stat-card"><div class="stat-label">누적 무게(g)</div><div class="stat-value" id="s-weight">-</div></div>
+  </div>
+
+  <div class="admin-toolbar">
+    <input type="text" id="search-nickname" placeholder="닉네임 검색">
+    <select id="filter-waste">
+      <option value="">전체 폐기물</option>
+      <option value="pp">플라스틱(PP)</option>
+      <option value="hdpe">플라스틱(HDPE)</option>
+      <option value="pet">플라스틱(PET)</option>
+      <option value="ldpe">비닐(LDPE)</option>
+      <option value="paper">종이</option>
+      <option value="can">캔</option>
+    </select>
+    <button type="button" class="btn-primary" id="search-btn">검색</button>
+  </div>
+
+  <div class="admin-actions">
+    <button type="button" class="btn-primary" id="csv-btn">CSV 다운로드</button>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>닉네임</th>
+          <th>폐기물 종류</th>
+          <th>무게(g)</th>
+          <th>탄소저감(kg)</th>
+          <th>수자원절약(%)</th>
+          <th>참여시각</th>
+          <th>삭제</th>
+        </tr>
+      </thead>
+      <tbody id="admin-tbody">
+        <tr><td colspan="7">불러오는 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="admin-pagination">
+    <button type="button" id="prev-page">이전</button>
+    <span id="page-info">1 / 1</span>
+    <button type="button" id="next-page">다음</button>
+  </div>
+</div>
+
+<script src="/static/data.js"></script>
+<script>
+(function () {
+  let currentPage = 1;
+  const limit = 20;
+  let totalPages = 1;
+  let currentData = [];
+
+  function fmtDate(s) {
+    if (!s) return '-';
+    try {
+      const d = new Date(s);
+      return d.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return s; }
+  }
+
+  async function loadSummary() {
+    const { summary } = await fetchRanking(1);
+    if (summary) {
+      document.getElementById('s-count').textContent = summary.participant_count;
+      document.getElementById('s-carbon').textContent = summary.total_carbon_kg;
+      document.getElementById('s-water').textContent = summary.avg_water_percent + '%';
+      document.getElementById('s-weight').textContent = summary.total_weight_g;
+    }
+  }
+
+  async function loadTable() {
+    const nickname = document.getElementById('search-nickname').value.trim();
+    const wasteType = document.getElementById('filter-waste').value;
+    const tbody = document.getElementById('admin-tbody');
+    tbody.innerHTML = '<tr><td colspan="7">불러오는 중...</td></tr>';
+
+    const { data, total } = await fetchSubmissionsAdmin({ page: currentPage, limit, nickname, wasteType });
+    currentData = data || [];
+    totalPages = Math.max(1, Math.ceil((total || 0) / limit));
+    document.getElementById('page-info').textContent = currentPage + ' / ' + totalPages;
+    document.getElementById('prev-page').disabled = currentPage <= 1;
+    document.getElementById('next-page').disabled = currentPage >= totalPages;
+
+    if (!currentData.length) {
+      tbody.innerHTML = '<tr><td colspan="7">데이터가 없습니다.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = currentData.map(function (row) {
+      return '<tr>' +
+        '<td>' + escapeHtml(row.nickname) + '</td>' +
+        '<td>' + escapeHtml(row.waste_label) + '</td>' +
+        '<td>' + row.weight_g + '</td>' +
+        '<td>' + row.carbon_kg + '</td>' +
+        '<td>' + row.water_percent + '</td>' +
+        '<td>' + fmtDate(row.created_at) + '</td>' +
+        '<td><button type="button" class="admin-del-btn" data-id="' + escapeHtml(row.id) + '">삭제</button></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  document.getElementById('admin-tbody').addEventListener('click', async function (e) {
+    const btn = e.target.closest('.admin-del-btn');
+    if (!btn) return;
+    const id = btn.getAttribute('data-id');
+    if (!confirm('이 레코드를 삭제하시겠습니까?')) return;
+    try {
+      await deleteSubmission(id);
+      showToast('삭제되었습니다.');
+      loadTable();
+      loadSummary();
+    } catch (err) {
+      showToast('삭제 실패');
+    }
+  });
+
+  document.getElementById('search-btn').addEventListener('click', function () {
+    currentPage = 1;
+    loadTable();
+  });
+  document.getElementById('search-nickname').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { currentPage = 1; loadTable(); }
+  });
+  document.getElementById('prev-page').addEventListener('click', function () {
+    if (currentPage > 1) { currentPage--; loadTable(); }
+  });
+  document.getElementById('next-page').addEventListener('click', function () {
+    if (currentPage < totalPages) { currentPage++; loadTable(); }
+  });
+
+  document.getElementById('csv-btn').addEventListener('click', async function () {
+    // 전체 데이터를 모아서 CSV 생성 (최대 2000건)
+    const all = [];
+    let page = 1;
+    while (page <= 20) {
+      const { data } = await fetchSubmissionsAdmin({ page, limit: 100 });
+      if (!data || !data.length) break;
+      all.push.apply(all, data);
+      if (data.length < 100) break;
+      page++;
+    }
+    if (!all.length) { showToast('다운로드할 데이터가 없습니다.'); return; }
+
+    const header = ['닉네임', '폐기물종류', '무게(g)', '탄소저감(kg)', '수자원절약(%)', '참여시각'];
+    const rows = all.map(function (r) {
+      return [r.nickname, r.waste_label, r.weight_g, r.carbon_kg, r.water_percent, fmtDate(r.created_at)];
+    });
+    const csvContent = [header].concat(rows).map(function (r) {
+      return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\r\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'h2oc_submissions_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  loadSummary();
+  loadTable();
+})();
+</script>
+</body>
+</html>

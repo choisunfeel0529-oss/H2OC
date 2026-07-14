@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>결과 - H2OC 계산기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-shell" id="result-screen">
+  <a href="/" class="back-btn" aria-label="처음으로">←</a>
+
+  <h1 class="result-title heading-font" id="result-title">축하해요!</h1>
+
+  <div class="result-stats">
+    <div class="stat-card">
+      <div class="stat-label">🌱 탄소 저감량</div>
+      <div class="stat-value" id="carbon-value">0</div>
+      <div class="stat-unit">kg CO2eq</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">💧 수자원 절약률</div>
+      <div class="stat-value" id="water-value">0</div>
+      <div class="stat-unit">%</div>
+    </div>
+  </div>
+
+  <p class="result-desc" id="result-desc"></p>
+
+  <div class="result-actions">
+    <button type="button" class="btn-primary" id="share-btn">
+      <span>공유하기</span><span aria-hidden="true">↗</span>
+    </button>
+    <a href="/ranking" class="btn-primary" id="ranking-btn" style="background:#fff; color:var(--green); border:2px solid var(--green);">
+      <span>내 랭킹 보러 가기</span><span aria-hidden="true">🥇</span>
+    </a>
+  </div>
+</div>
+
+<script src="/static/data.js"></script>
+<script>
+(function () {
+  const raw = sessionStorage.getItem(SS_RESULT);
+  if (!raw) { window.location.href = '/'; return; }
+  let result;
+  try { result = JSON.parse(raw); } catch (e) { window.location.href = '/'; return; }
+
+  document.getElementById('result-title').textContent = escapeHtml(result.nickname) + '님, 축하해요!';
+  document.getElementById('carbon-value').textContent = result.carbon_kg;
+  document.getElementById('water-value').textContent = result.water_percent;
+  document.getElementById('result-desc').innerHTML =
+    escapeHtml(result.waste_label) + ' ' + result.weight_g + 'g을 분리배출해서<br>' +
+    '<strong>' + result.carbon_kg + 'kg</strong>의 탄소를 줄이고<br>' +
+    '<strong>' + result.water_percent + '%</strong>의 수자원을 절약했어요!';
+
+  document.getElementById('share-btn').addEventListener('click', async function () {
+    const shareText = 'H2OC 계산기로 ' + result.waste_label + ' ' + result.weight_g + 'g 분리배출!\n' +
+      '탄소 ' + result.carbon_kg + 'kg 절감, 수자원 ' + result.water_percent + '% 절약 🌱';
+    const shareUrl = window.location.origin + '/ranking';
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'H2OC 계산기', text: shareText, url: shareUrl });
+        return;
+      } catch (e) { /* 사용자가 취소한 경우 등 - 클립보드로 대체 */ }
+    }
+    try {
+      await navigator.clipboard.writeText(shareText + '\n' + shareUrl);
+      showToast('클립보드에 복사되었습니다!');
+    } catch (e) {
+      showToast('공유하기를 지원하지 않는 환경입니다.');
+    }
+  });
+})();
+</script>
+</body>
+</html>
