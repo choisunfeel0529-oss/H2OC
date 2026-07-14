@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div class="app-shell" id="login-screen">
+<div class="app-shell" id="login-screen" style="display:none;">
   <a href="/" class="back-btn" aria-label="뒤로가기">←</a>
 
   <div class="step-indicator heading-font">1 / 3</div>
@@ -25,17 +25,44 @@
   </div>
 </div>
 
+<div class="app-shell" id="loading-screen">
+  <p class="loading-msg" style="margin-top:50vh; text-align:center;">확인 중...</p>
+</div>
+
 <script src="/static/data.js"></script>
 <script>
 (function () {
+  const loginScreen = document.getElementById('login-screen');
+  const loadingScreen = document.getElementById('loading-screen');
   const form = document.getElementById('login-form');
   const input = document.getElementById('nickname-input');
   const errorMsg = document.getElementById('error-msg');
   const nextBtn = document.getElementById('next-btn');
 
-  // 이전에 사용했던 닉네임 자동 채움 (편의 기능)
-  const lastNickname = localStorage.getItem(LS_LAST_NICKNAME);
-  if (lastNickname) input.value = lastNickname;
+  function showLogin() {
+    loadingScreen.style.display = 'none';
+    loginScreen.style.display = '';
+  }
+
+  // 요청 4: 같은 디바이스에서 재접속하는 경우, 기존 닉네임을 그대로 사용할 수 있도록
+  // 서버에 저장된 device_id 기준 닉네임을 조회해 자동으로 다음 단계로 진행한다.
+  (async function checkDeviceReuse() {
+    try {
+      const deviceNickname = await fetchDeviceNickname();
+      if (deviceNickname) {
+        sessionStorage.setItem(SS_NICKNAME, deviceNickname);
+        localStorage.setItem(LS_LAST_NICKNAME, deviceNickname);
+        window.location.href = '/select';
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    // 재사용할 닉네임이 없으면 입력창 표시 (이전 입력값 편의상 자동 채움)
+    const lastNickname = localStorage.getItem(LS_LAST_NICKNAME);
+    if (lastNickname) input.value = lastNickname;
+    showLogin();
+  })();
 
   function showError(msg) {
     errorMsg.textContent = msg;

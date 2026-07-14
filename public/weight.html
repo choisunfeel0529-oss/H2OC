@@ -36,11 +36,15 @@
   if (!nickname) { window.location.href = '/login'; return; }
   if (!wasteCode) { window.location.href = '/select'; return; }
 
-  const wasteType = getWasteType(wasteCode);
   const pageTitle = document.getElementById('page-title');
-  if (wasteType) {
-    pageTitle.innerHTML = escapeHtml(wasteType.short) + ',<br>분리배출한 무게를<br>입력해주세요';
-  }
+
+  (async function init() {
+    const wasteTypes = await fetchWasteTypes();
+    const wasteType = getWasteTypeFromList(wasteTypes, wasteCode);
+    if (wasteType) {
+      pageTitle.innerHTML = escapeHtml(wasteType.item_name) + ',<br>분리배출한 무게를<br>입력해주세요';
+    }
+  })();
 
   const form = document.getElementById('weight-form');
   const input = document.getElementById('weight-input');

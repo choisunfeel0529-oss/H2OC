@@ -49,7 +49,8 @@
   function renderRow(rank, row, isMe) {
     const bClass = badgeClass(rank);
     const carbon = Math.round((row.carbon_kg || 0) * 100) / 100;
-    const water = Math.round(row.water_percent || 0);
+    const hasNumericWater = row.water_percent !== null && row.water_percent !== undefined && !isNaN(Number(row.water_percent));
+    const water = hasNumericWater ? Math.round(Number(row.water_percent)) : '-';
     return (
       '<div class="rank-row' + (isMe ? ' me' : '') + '">' +
         '<div class="rank-badge' + (bClass ? ' ' + bClass : '') + '">' + rank + '</div>' +

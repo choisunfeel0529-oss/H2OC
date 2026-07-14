@@ -23,7 +23,7 @@
     <div class="stat-card">
       <div class="stat-label">💧 수자원 절약률</div>
       <div class="stat-value" id="water-value">0</div>
-      <div class="stat-unit">%</div>
+      <div class="stat-unit" id="water-unit">%</div>
     </div>
   </div>
 
@@ -31,7 +31,7 @@
 
   <div class="result-actions">
     <button type="button" class="btn-primary" id="share-btn">
-      <span>공유하기</span><span aria-hidden="true">↗</span>
+      <span>스토리에 공유하기</span><span aria-hidden="true">↗</span>
     </button>
     <a href="/ranking" class="btn-primary" id="ranking-btn" style="background:#fff; color:var(--green); border:2px solid var(--green);">
       <span>내 랭킹 보러 가기</span><span aria-hidden="true">🥇</span>
@@ -39,6 +39,45 @@
   </div>
 </div>
 
+<!-- ================================================================
+     SNS 스토리(9:16) 공유용 결과 카드 (화면에는 보이지 않고 이미지 캡처용)
+     ================================================================ -->
+<div id="story-card-wrap">
+  <div id="story-card">
+    <div class="story-logo-badge heading-font">H<sub>2</sub>OC 계산기</div>
+    <div class="story-nickname heading-font" id="story-nickname">닉네임님</div>
+    <div class="story-sub" id="story-waste">품목 000g</div>
+
+    <div class="story-stats">
+      <div class="story-stat">
+        <div class="story-stat-icon">🌱</div>
+        <div class="story-stat-value heading-font" id="story-carbon">0<span class="story-stat-unit">kg</span></div>
+        <div class="story-stat-label">탄소 저감량 (CO2eq)</div>
+      </div>
+      <div class="story-stat">
+        <div class="story-stat-icon">💧</div>
+        <div class="story-stat-value heading-font" id="story-water">0<span class="story-stat-unit">%</span></div>
+        <div class="story-stat-label">수자원 절약</div>
+      </div>
+    </div>
+
+    <div class="story-footer">나도 분리배출로 지구를 지켜요 🌍</div>
+  </div>
+</div>
+
+<!-- 공유 미리보기 모달 -->
+<div id="share-modal" class="share-modal" style="display:none;">
+  <div class="share-modal-inner">
+    <img id="share-preview-img" alt="공유 이미지 미리보기">
+    <div class="share-modal-actions">
+      <button type="button" class="btn-primary" id="share-download-btn">이미지 저장</button>
+      <button type="button" class="btn-primary" id="share-native-btn" style="background:#fff; color:var(--green); border:2px solid var(--green); display:none;">공유하기</button>
+      <button type="button" id="share-close-btn" class="footer-link" style="background:none; border:none; color:#9aa39a; text-decoration:underline; cursor:pointer; padding:10px;">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="/static/data.js"></script>
 <script>
 (function () {
@@ -47,31 +86,111 @@
   let result;
   try { result = JSON.parse(raw); } catch (e) { window.location.href = '/'; return; }
 
+  // water_percent가 숫자면 %, 아니면(예: "신재 대비 대폭 절감") water_label 텍스트 사용
+  const hasNumericWater = result.water_percent !== null && result.water_percent !== undefined && !isNaN(Number(result.water_percent));
+  const waterDisplay = hasNumericWater ? Math.round(Number(result.water_percent)) : (result.water_label || '-');
+  const waterUnit = hasNumericWater ? '%' : '';
+
   document.getElementById('result-title').textContent = escapeHtml(result.nickname) + '님, 축하해요!';
   document.getElementById('carbon-value').textContent = result.carbon_kg;
-  document.getElementById('water-value').textContent = result.water_percent;
+  document.getElementById('water-value').textContent = waterDisplay;
+  document.getElementById('water-unit').textContent = waterUnit;
   document.getElementById('result-desc').innerHTML =
     escapeHtml(result.waste_label) + ' ' + result.weight_g + 'g을 분리배출해서<br>' +
     '<strong>' + result.carbon_kg + 'kg</strong>의 탄소를 줄이고<br>' +
-    '<strong>' + result.water_percent + '%</strong>의 수자원을 절약했어요!';
+    '<strong>' + waterDisplay + waterUnit + '</strong>의 수자원을 절약했어요!';
+
+  // ---- 스토리 카드 내용 채우기 ----
+  document.getElementById('story-nickname').textContent = result.nickname + '님';
+  document.getElementById('story-waste').textContent = result.waste_label + ' ' + result.weight_g + 'g 분리배출';
+  document.getElementById('story-carbon').innerHTML = result.carbon_kg + '<span class="story-stat-unit">kg</span>';
+  document.getElementById('story-water').innerHTML = waterDisplay + '<span class="story-stat-unit">' + waterUnit + '</span>';
+
+  const shareModal = document.getElementById('share-modal');
+  const previewImg = document.getElementById('share-preview-img');
+  const downloadBtn = document.getElementById('share-download-btn');
+  const nativeBtn = document.getElementById('share-native-btn');
+  const closeBtn = document.getElementById('share-close-btn');
+  let lastBlob = null;
+
+  function fileName() {
+    return 'h2oc_' + result.nickname + '_' + new Date().toISOString().slice(0, 10) + '.png';
+  }
 
   document.getElementById('share-btn').addEventListener('click', async function () {
-    const shareText = 'H2OC 계산기로 ' + result.waste_label + ' ' + result.weight_g + 'g 분리배출!\n' +
-      '탄소 ' + result.carbon_kg + 'kg 절감, 수자원 ' + result.water_percent + '% 절약 🌱';
-    const shareUrl = window.location.origin + '/ranking';
+    const btn = this;
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span>이미지 생성 중...</span>';
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'H2OC 계산기', text: shareText, url: shareUrl });
-        return;
-      } catch (e) { /* 사용자가 취소한 경우 등 - 클립보드로 대체 */ }
-    }
     try {
-      await navigator.clipboard.writeText(shareText + '\n' + shareUrl);
-      showToast('클립보드에 복사되었습니다!');
-    } catch (e) {
-      showToast('공유하기를 지원하지 않는 환경입니다.');
+      const cardEl = document.getElementById('story-card');
+      const canvas = await html2canvas(cardEl, {
+        width: 1080,
+        height: 1920,
+        scale: 1,
+        backgroundColor: null,
+        useCORS: true
+      });
+
+      canvas.toBlob(async function (blob) {
+        if (!blob) {
+          showToast('이미지 생성에 실패했습니다.');
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+          return;
+        }
+        lastBlob = blob;
+        const url = URL.createObjectURL(blob);
+        previewImg.src = url;
+        shareModal.style.display = 'flex';
+
+        // Web Share API Level 2 (파일 공유) 지원 시 네이티브 공유 버튼 노출
+        const file = new File([blob], fileName(), { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          nativeBtn.style.display = '';
+          nativeBtn.onclick = async function () {
+            try {
+              await navigator.share({
+                files: [file],
+                title: 'H2OC 계산기',
+                text: result.nickname + '님의 분리배출 성과! 탄소 ' + result.carbon_kg + 'kg 절감 🌱'
+              });
+            } catch (e) { /* 사용자 취소 등 */ }
+          };
+        } else {
+          nativeBtn.style.display = 'none';
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }, 'image/png');
+    } catch (err) {
+      console.error(err);
+      showToast('이미지 생성 중 오류가 발생했습니다.');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
     }
+  });
+
+  downloadBtn.addEventListener('click', function () {
+    if (!lastBlob) return;
+    const url = URL.createObjectURL(lastBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+    showToast('이미지가 저장되었습니다! 인스타그램 스토리에 업로드해보세요 🎉');
+  });
+
+  closeBtn.addEventListener('click', function () {
+    shareModal.style.display = 'none';
+  });
+  shareModal.addEventListener('click', function (e) {
+    if (e.target === shareModal) shareModal.style.display = 'none';
   });
 })();
 </script>

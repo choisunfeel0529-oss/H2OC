@@ -9,10 +9,28 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div class="admin-shell">
+
+<!-- ================= 비밀번호 인증 화면 ================= -->
+<div class="app-shell admin-login-shell" id="admin-login-screen" style="display:none;">
+  <h1 class="page-title heading-font">관리자 비밀번호를<br>입력해주세요</h1>
+  <form id="admin-login-form" autocomplete="off">
+    <input type="password" id="admin-password-input" class="input-pill" placeholder="비밀번호" required>
+    <p class="error-text" id="admin-login-error" style="display:none;"></p>
+  </form>
+  <div style="margin-top:24px;">
+    <button type="submit" form="admin-login-form" class="btn-primary" id="admin-login-btn">확인</button>
+  </div>
+  <p class="footer-link"><a href="/">← 메인으로</a></p>
+</div>
+
+<!-- ================= 관리자 데이터 화면 ================= -->
+<div class="admin-shell" id="admin-content-screen" style="display:none;">
   <div class="admin-header">
     <div class="admin-title heading-font">H2OC 관리자 데이터 조회</div>
-    <a href="/" class="footer-link">← 메인으로</a>
+    <div>
+      <a href="/" class="footer-link" style="margin-right:14px;">← 메인으로</a>
+      <button type="button" id="admin-logout-btn" class="footer-link" style="background:none;border:none;color:#9aa39a;text-decoration:underline;cursor:pointer;font-size:12px;">로그아웃</button>
+    </div>
   </div>
 
   <div class="admin-summary" id="admin-summary">
@@ -22,16 +40,22 @@
     <div class="stat-card"><div class="stat-label">누적 무게(g)</div><div class="stat-value" id="s-weight">-</div></div>
   </div>
 
+  <!-- 계산 데이터 엑셀 업로드 -->
+  <div class="admin-upload-box">
+    <h3>📊 계산 데이터 엑셀 업로드</h3>
+    <div class="admin-upload-row">
+      <input type="file" id="excel-upload-input" accept=".xlsx,.xls">
+      <button type="button" class="btn-primary" id="excel-upload-btn" style="width:auto; padding:10px 20px; font-size:14px;">업로드</button>
+    </div>
+    <p class="admin-upload-hint">1행은 컬럼명(헤더)이며, 2행부터 마지막 행까지 자동으로 인식하여 계산에 반영됩니다. (필수 헤더: 품목, 탄소 절감 계수 / 선택: 수자원 절감률(%))</p>
+    <div class="admin-upload-status" id="excel-upload-status"></div>
+    <div id="current-waste-types" style="margin-top:12px; font-size:13px; color:#4a544b;"></div>
+  </div>
+
   <div class="admin-toolbar">
     <input type="text" id="search-nickname" placeholder="닉네임 검색">
     <select id="filter-waste">
       <option value="">전체 폐기물</option>
-      <option value="pp">플라스틱(PP)</option>
-      <option value="hdpe">플라스틱(HDPE)</option>
-      <option value="pet">플라스틱(PET)</option>
-      <option value="ldpe">비닐(LDPE)</option>
-      <option value="paper">종이</option>
-      <option value="can">캔</option>
     </select>
     <button type="button" class="btn-primary" id="search-btn">검색</button>
   </div>
@@ -48,7 +72,7 @@
           <th>폐기물 종류</th>
           <th>무게(g)</th>
           <th>탄소저감(kg)</th>
-          <th>수자원절약(%)</th>
+          <th>수자원절약</th>
           <th>참여시각</th>
           <th>삭제</th>
         </tr>
@@ -69,6 +93,64 @@
 <script src="/static/data.js"></script>
 <script>
 (function () {
+  const loginScreen = document.getElementById('admin-login-screen');
+  const contentScreen = document.getElementById('admin-content-screen');
+  const loginForm = document.getElementById('admin-login-form');
+  const passwordInput = document.getElementById('admin-password-input');
+  const loginError = document.getElementById('admin-login-error');
+  const loginBtn = document.getElementById('admin-login-btn');
+
+  function showLoginScreen() {
+    contentScreen.style.display = 'none';
+    loginScreen.style.display = '';
+  }
+  function showContentScreen() {
+    loginScreen.style.display = 'none';
+    contentScreen.style.display = '';
+    initContent();
+  }
+
+  // 요청 2: 관리자 페이지 접속 시 비밀번호 입력 창을 먼저 표시
+  // 이미 유효한 세션이 있으면(로그인 유지) 바로 데이터 화면으로 진입
+  (async function init() {
+    const authenticated = await adminCheck();
+    if (authenticated) {
+      showContentScreen();
+    } else {
+      showLoginScreen();
+    }
+  })();
+
+  loginForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    loginError.style.display = 'none';
+    const password = passwordInput.value;
+    if (!password) return;
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = '확인 중...';
+    try {
+      await adminLogin(password);
+      passwordInput.value = '';
+      showContentScreen();
+    } catch (err) {
+      loginError.textContent = err.status === 401
+        ? '비밀번호가 일치하지 않습니다. 다시 입력해주세요.'
+        : (err.message || '로그인 중 오류가 발생했습니다.');
+      loginError.style.display = 'block';
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = '확인';
+    }
+  });
+
+  document.getElementById('admin-logout-btn').addEventListener('click', async function () {
+    await adminLogout();
+    showLoginScreen();
+  });
+
+  // ================= 이하 데이터 화면 로직 (인증 후에만 실행) =================
+  let contentInitialized = false;
   let currentPage = 1;
   const limit = 20;
   let totalPages = 1;
@@ -82,6 +164,22 @@
     } catch (e) { return s; }
   }
 
+  function fmtWater(row) {
+    if (row.water_percent !== null && row.water_percent !== undefined && row.water_percent !== '') {
+      return row.water_percent + '%';
+    }
+    return row.water_label || '-';
+  }
+
+  function handleAuthError(err) {
+    if (err && err.status === 401) {
+      showToast('로그인이 만료되었습니다. 다시 로그인해주세요.');
+      showLoginScreen();
+      return true;
+    }
+    return false;
+  }
+
   async function loadSummary() {
     const { summary } = await fetchRanking(1);
     if (summary) {
@@ -92,100 +190,171 @@
     }
   }
 
+  async function loadWasteTypeFilter() {
+    const select = document.getElementById('filter-waste');
+    try {
+      const { data } = await fetchAdminWasteTypes();
+      const options = ['<option value="">전체 폐기물</option>'].concat(
+        (data || []).map(function (w) {
+          return '<option value="' + escapeHtml(w.code) + '">' + escapeHtml(w.item_name) + '</option>';
+        })
+      );
+      select.innerHTML = options.join('');
+
+      const listEl = document.getElementById('current-waste-types');
+      if (data && data.length) {
+        listEl.innerHTML = '현재 등록된 계산 데이터 (' + data.length + '개): ' +
+          data.map(function (w) {
+            const water = w.water_percent !== null && w.water_percent !== undefined ? w.water_percent + '%' : (w.water_label || '-');
+            return escapeHtml(w.item_name) + '(계수 ' + w.carbon_factor + ', 수자원 ' + escapeHtml(String(water)) + ')';
+          }).join(', ');
+      } else {
+        listEl.innerHTML = '등록된 계산 데이터가 없습니다.';
+      }
+    } catch (err) {
+      if (handleAuthError(err)) return;
+    }
+  }
+
   async function loadTable() {
     const nickname = document.getElementById('search-nickname').value.trim();
     const wasteType = document.getElementById('filter-waste').value;
     const tbody = document.getElementById('admin-tbody');
     tbody.innerHTML = '<tr><td colspan="7">불러오는 중...</td></tr>';
 
-    const { data, total } = await fetchSubmissionsAdmin({ page: currentPage, limit, nickname, wasteType });
-    currentData = data || [];
-    totalPages = Math.max(1, Math.ceil((total || 0) / limit));
-    document.getElementById('page-info').textContent = currentPage + ' / ' + totalPages;
-    document.getElementById('prev-page').disabled = currentPage <= 1;
-    document.getElementById('next-page').disabled = currentPage >= totalPages;
+    try {
+      const { data, total } = await fetchSubmissionsAdmin({ page: currentPage, limit, nickname, wasteType });
+      currentData = data || [];
+      totalPages = Math.max(1, Math.ceil((total || 0) / limit));
+      document.getElementById('page-info').textContent = currentPage + ' / ' + totalPages;
+      document.getElementById('prev-page').disabled = currentPage <= 1;
+      document.getElementById('next-page').disabled = currentPage >= totalPages;
 
-    if (!currentData.length) {
-      tbody.innerHTML = '<tr><td colspan="7">데이터가 없습니다.</td></tr>';
-      return;
+      if (!currentData.length) {
+        tbody.innerHTML = '<tr><td colspan="7">데이터가 없습니다.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = currentData.map(function (row) {
+        return '<tr>' +
+          '<td>' + escapeHtml(row.nickname) + '</td>' +
+          '<td>' + escapeHtml(row.waste_label) + '</td>' +
+          '<td>' + row.weight_g + '</td>' +
+          '<td>' + row.carbon_kg + '</td>' +
+          '<td>' + escapeHtml(fmtWater(row)) + '</td>' +
+          '<td>' + fmtDate(row.created_at) + '</td>' +
+          '<td><button type="button" class="admin-del-btn" data-id="' + escapeHtml(row.id) + '">삭제</button></td>' +
+        '</tr>';
+      }).join('');
+    } catch (err) {
+      if (handleAuthError(err)) return;
+      tbody.innerHTML = '<tr><td colspan="7">불러오기에 실패했습니다.</td></tr>';
     }
-
-    tbody.innerHTML = currentData.map(function (row) {
-      return '<tr>' +
-        '<td>' + escapeHtml(row.nickname) + '</td>' +
-        '<td>' + escapeHtml(row.waste_label) + '</td>' +
-        '<td>' + row.weight_g + '</td>' +
-        '<td>' + row.carbon_kg + '</td>' +
-        '<td>' + row.water_percent + '</td>' +
-        '<td>' + fmtDate(row.created_at) + '</td>' +
-        '<td><button type="button" class="admin-del-btn" data-id="' + escapeHtml(row.id) + '">삭제</button></td>' +
-      '</tr>';
-    }).join('');
   }
 
-  document.getElementById('admin-tbody').addEventListener('click', async function (e) {
-    const btn = e.target.closest('.admin-del-btn');
-    if (!btn) return;
-    const id = btn.getAttribute('data-id');
-    if (!confirm('이 레코드를 삭제하시겠습니까?')) return;
-    try {
-      await deleteSubmission(id);
-      showToast('삭제되었습니다.');
-      loadTable();
+  function initContent() {
+    if (contentInitialized) {
       loadSummary();
-    } catch (err) {
-      showToast('삭제 실패');
+      loadWasteTypeFilter();
+      loadTable();
+      return;
     }
-  });
+    contentInitialized = true;
 
-  document.getElementById('search-btn').addEventListener('click', function () {
-    currentPage = 1;
-    loadTable();
-  });
-  document.getElementById('search-nickname').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { currentPage = 1; loadTable(); }
-  });
-  document.getElementById('prev-page').addEventListener('click', function () {
-    if (currentPage > 1) { currentPage--; loadTable(); }
-  });
-  document.getElementById('next-page').addEventListener('click', function () {
-    if (currentPage < totalPages) { currentPage++; loadTable(); }
-  });
-
-  document.getElementById('csv-btn').addEventListener('click', async function () {
-    // 전체 데이터를 모아서 CSV 생성 (최대 2000건)
-    const all = [];
-    let page = 1;
-    while (page <= 20) {
-      const { data } = await fetchSubmissionsAdmin({ page, limit: 100 });
-      if (!data || !data.length) break;
-      all.push.apply(all, data);
-      if (data.length < 100) break;
-      page++;
-    }
-    if (!all.length) { showToast('다운로드할 데이터가 없습니다.'); return; }
-
-    const header = ['닉네임', '폐기물종류', '무게(g)', '탄소저감(kg)', '수자원절약(%)', '참여시각'];
-    const rows = all.map(function (r) {
-      return [r.nickname, r.waste_label, r.weight_g, r.carbon_kg, r.water_percent, fmtDate(r.created_at)];
+    document.getElementById('admin-tbody').addEventListener('click', async function (e) {
+      const btn = e.target.closest('.admin-del-btn');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      if (!confirm('이 레코드를 삭제하시겠습니까?')) return;
+      try {
+        await deleteSubmission(id);
+        showToast('삭제되었습니다.');
+        loadTable();
+        loadSummary();
+      } catch (err) {
+        if (handleAuthError(err)) return;
+        showToast('삭제 실패');
+      }
     });
-    const csvContent = [header].concat(rows).map(function (r) {
-      return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
-    }).join('\r\n');
 
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'h2oc_submissions_' + new Date().toISOString().slice(0, 10) + '.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+    document.getElementById('search-btn').addEventListener('click', function () {
+      currentPage = 1;
+      loadTable();
+    });
+    document.getElementById('search-nickname').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { currentPage = 1; loadTable(); }
+    });
+    document.getElementById('prev-page').addEventListener('click', function () {
+      if (currentPage > 1) { currentPage--; loadTable(); }
+    });
+    document.getElementById('next-page').addEventListener('click', function () {
+      if (currentPage < totalPages) { currentPage++; loadTable(); }
+    });
 
-  loadSummary();
-  loadTable();
+    document.getElementById('excel-upload-btn').addEventListener('click', async function () {
+      const fileInput = document.getElementById('excel-upload-input');
+      const statusEl = document.getElementById('excel-upload-status');
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        statusEl.className = 'admin-upload-status err';
+        statusEl.textContent = '엑셀 파일을 선택해주세요.';
+        return;
+      }
+      statusEl.className = 'admin-upload-status';
+      statusEl.textContent = '업로드 중...';
+      try {
+        const result = await uploadWasteTypesExcel(file);
+        statusEl.className = 'admin-upload-status ok';
+        statusEl.textContent = '업로드 완료! ' + result.count + '개 품목이 반영되었습니다.';
+        fileInput.value = '';
+        loadWasteTypeFilter();
+      } catch (err) {
+        if (handleAuthError(err)) return;
+        statusEl.className = 'admin-upload-status err';
+        statusEl.textContent = err.message || '업로드 중 오류가 발생했습니다.';
+      }
+    });
+
+    document.getElementById('csv-btn').addEventListener('click', async function () {
+      // 전체 데이터를 모아서 CSV 생성 (최대 2000건)
+      const all = [];
+      let page = 1;
+      try {
+        while (page <= 20) {
+          const { data } = await fetchSubmissionsAdmin({ page, limit: 100 });
+          if (!data || !data.length) break;
+          all.push.apply(all, data);
+          if (data.length < 100) break;
+          page++;
+        }
+      } catch (err) {
+        if (handleAuthError(err)) return;
+      }
+      if (!all.length) { showToast('다운로드할 데이터가 없습니다.'); return; }
+
+      const header = ['닉네임', '폐기물종류', '무게(g)', '탄소저감(kg)', '수자원절약', '참여시각'];
+      const rows = all.map(function (r) {
+        return [r.nickname, r.waste_label, r.weight_g, r.carbon_kg, fmtWater(r), fmtDate(r.created_at)];
+      });
+      const csvContent = [header].concat(rows).map(function (r) {
+        return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+      }).join('\r\n');
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'h2oc_submissions_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    loadSummary();
+    loadWasteTypeFilter();
+    loadTable();
+  }
 })();
 </script>
 </body>

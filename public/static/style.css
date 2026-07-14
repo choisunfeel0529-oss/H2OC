@@ -517,3 +517,138 @@ table.admin-table tr:hover td{ background:#fafcf9; }
 @media (max-width: 640px){
   .admin-summary{ grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---------- 관리자 로그인 화면 ---------- */
+.admin-login-shell{
+  max-width: 420px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding: 28px 24px 40px;
+}
+.admin-login-shell .page-title{ margin-bottom: 24px; }
+
+/* ---------- 관리자: 계산 데이터 엑셀 업로드 ---------- */
+.admin-upload-box{
+  background:#fff;
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  margin-bottom: 24px;
+}
+.admin-upload-box h3{
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--green-dark);
+}
+.admin-upload-row{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.admin-upload-row input[type=file]{ flex:1; min-width: 200px; font-size: 13px; }
+.admin-upload-hint{ font-size:12px; color:#7a847b; margin-top:8px; }
+.admin-upload-status{ font-size:13px; margin-top:8px; font-weight:700; }
+.admin-upload-status.ok{ color: var(--green-dark); }
+.admin-upload-status.err{ color: var(--danger); }
+
+/* ---------- SNS 스토리 공유 카드 (9:16, 1080x1920 오프스크린 렌더용) ---------- */
+#story-card-wrap{
+  position: fixed;
+  top: 0;
+  left: -99999px;
+  z-index: -1;
+}
+#story-card{
+  width: 1080px;
+  height: 1920px;
+  background: linear-gradient(160deg, #3d7a3d 0%, #2c5c2c 55%, #17251a 100%);
+  color: #fff;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding: 120px 90px;
+  box-sizing: border-box;
+  font-family:'Noto Sans KR', sans-serif;
+}
+.story-logo-badge{
+  font-size: 54px;
+  background: rgba(255,255,255,0.16);
+  padding: 18px 44px;
+  border-radius: 40px;
+  margin-bottom: 90px;
+  letter-spacing: 1px;
+}
+.story-nickname{
+  font-size: 76px;
+  text-align:center;
+  margin-bottom: 22px;
+  line-height:1.3;
+}
+.story-sub{
+  font-size: 34px;
+  opacity: 0.9;
+  margin-bottom: 100px;
+  text-align:center;
+}
+.story-stats{
+  display:flex;
+  gap: 40px;
+  width: 100%;
+  margin-bottom: 120px;
+}
+.story-stat{
+  flex:1;
+  background: rgba(255,255,255,0.12);
+  border-radius: 44px;
+  padding: 56px 20px;
+  text-align:center;
+}
+.story-stat-icon{ font-size: 56px; margin-bottom: 20px; }
+.story-stat-value{ font-size: 68px; line-height:1; margin-bottom: 14px; }
+.story-stat-unit{ font-size: 30px; margin-left: 6px; }
+.story-stat-label{ font-size: 26px; opacity:0.85; }
+.story-footer{
+  font-size: 32px;
+  font-weight: 700;
+  opacity: 0.95;
+  text-align:center;
+}
+
+/* ---------- 공유 미리보기 모달 ---------- */
+.share-modal{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index: 1000;
+  padding: 20px;
+}
+.share-modal-inner{
+  background:#fff;
+  border-radius: var(--radius-card);
+  padding: 20px;
+  max-width: 340px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y:auto;
+}
+.share-modal-inner img{
+  width: 100%;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  display:block;
+  aspect-ratio: 9/16;
+  object-fit: cover;
+}
+.share-modal-actions{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}

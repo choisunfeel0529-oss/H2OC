@@ -2,46 +2,59 @@
    H2OC 계산기 - 데이터/계산 공통 로직 (Cloudflare D1 API 연동)
    ========================================================== */
 
-// 폐기물 종류 정의
-// carbonPerKg : 1kg 재활용 시 절감되는 탄소량(kg CO2eq) - 선형 적용
-// waterBase   : 1kg 기준 수자원 절약률(%) - sqrt(가중치)로 완만하게 증가, 95% 상한
-const WASTE_TYPES = [
-  { code: 'pp',    label: '플라스틱 (PP)',   short: '플라스틱(PP)',   carbonPerKg: 1.31, waterBase: 46 },
-  { code: 'hdpe',  label: '플라스틱 (HDPE)', short: '플라스틱(HDPE)', carbonPerKg: 1.45, waterBase: 50 },
-  { code: 'pet',   label: '플라스틱 (PET)',  short: '플라스틱(PET)',  carbonPerKg: 1.60, waterBase: 55 },
-  { code: 'ldpe',  label: '비닐 (LDPE)',     short: '비닐(LDPE)',     carbonPerKg: 1.20, waterBase: 40 },
-  { code: 'paper', label: '종이',            short: '종이',           carbonPerKg: 0.90, waterBase: 35 },
-  { code: 'can',   label: '캔',              short: '캔',             carbonPerKg: 4.15, waterBase: 65 },
-];
-
 const API_BASE = '/api';
 const SS_NICKNAME = 'h2oc_nickname';
 const SS_WASTE_CODE = 'h2oc_waste_code';
 const SS_RESULT = 'h2oc_result';
 const LS_LAST_NICKNAME = 'h2oc_last_nickname';
-
-function getWasteType(code) {
-  return WASTE_TYPES.find(w => w.code === code) || null;
-}
+const LS_DEVICE_ID = 'h2oc_device_id';
 
 /**
- * 클라이언트 사이드 미리보기 계산 (서버에서 최종 계산/검증 다시 수행함)
- * @param {string} code 폐기물 코드
- * @param {number} weightG 무게(g)
+ * 이 디바이스(브라우저)를 식별하는 고유 ID.
+ * localStorage에 저장되어 새로고침/재접속/앱 재시작에도 유지된다.
+ * (요청 4: 동일 디바이스 재접속 시 기존 닉네임 재사용을 위한 식별자)
  */
-function computeResult(code, weightG) {
-  const type = getWasteType(code);
-  if (!type) return null;
-  const weightKg = weightG / 1000;
-  const carbon = Math.round(type.carbonPerKg * weightKg * 100) / 100;
-  const water = Math.min(95, Math.round(type.waterBase * Math.sqrt(weightKg)));
-  return { carbon_kg: carbon, water_percent: water };
+function getDeviceId() {
+  try {
+    let id = localStorage.getItem(LS_DEVICE_ID);
+    if (!id) {
+      id = (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID()
+        : ('dev-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+      localStorage.setItem(LS_DEVICE_ID, id);
+    }
+    return id;
+  } catch (e) {
+    // localStorage 접근 불가 시(프라이빗 모드 등) 세션 한정 임시 ID
+    return 'nostore-' + Date.now();
+  }
 }
 
-/** 닉네임 중복 확인 (서버) */
+/** 폐기물 종류 목록 (서버 - 엑셀 업로드 데이터 기준) 캐시 */
+let _wasteTypesCache = null;
+async function fetchWasteTypes() {
+  if (_wasteTypesCache) return _wasteTypesCache;
+  try {
+    const res = await fetch(`${API_BASE}/waste-types`);
+    if (!res.ok) return [];
+    const json = await res.json();
+    _wasteTypesCache = json.data || [];
+    return _wasteTypesCache;
+  } catch (e) {
+    console.error('fetchWasteTypes error', e);
+    return [];
+  }
+}
+
+function getWasteTypeFromList(list, code) {
+  return list.find(w => w.code === code) || null;
+}
+
+/** 닉네임 중복 확인 (서버, 동일 디바이스 재사용 허용) */
 async function isNicknameTaken(nickname) {
   try {
-    const res = await fetch(`${API_BASE}/nickname-check?nickname=${encodeURIComponent(nickname)}`);
+    const deviceId = getDeviceId();
+    const res = await fetch(`${API_BASE}/nickname-check?nickname=${encodeURIComponent(nickname)}&device_id=${encodeURIComponent(deviceId)}`);
     if (!res.ok) return false;
     const json = await res.json();
     return !!json.taken;
@@ -51,12 +64,26 @@ async function isNicknameTaken(nickname) {
   }
 }
 
+/** 이 디바이스가 이전에 사용한 닉네임 조회 (있으면 로그인 화면 자동 스킵용) */
+async function fetchDeviceNickname() {
+  try {
+    const deviceId = getDeviceId();
+    const res = await fetch(`${API_BASE}/device-nickname?device_id=${encodeURIComponent(deviceId)}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.nickname || null;
+  } catch (e) {
+    console.error('fetchDeviceNickname error', e);
+    return null;
+  }
+}
+
 /** 제출 생성 (계산 + 저장, 서버에서 최종 계산/닉네임 중복 재검증) */
 async function createSubmission(data) {
   const res = await fetch(`${API_BASE}/submissions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(Object.assign({}, data, { device_id: getDeviceId() }))
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -91,25 +118,102 @@ async function fetchMyRanking(nickname) {
   }
 }
 
+/** 관리자: 로그인 */
+async function adminLogin(password) {
+  const res = await fetch(`${API_BASE}/admin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ password })
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(json.error || '로그인 실패');
+    err.status = res.status;
+    throw err;
+  }
+  return json;
+}
+
+/** 관리자: 로그아웃 */
+async function adminLogout() {
+  await fetch(`${API_BASE}/admin/logout`, { method: 'POST', credentials: 'include' });
+}
+
+/** 관리자: 인증 상태 확인 */
+async function adminCheck() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/check`, { credentials: 'include' });
+    if (!res.ok) return false;
+    const json = await res.json();
+    return !!json.authenticated;
+  } catch (e) {
+    return false;
+  }
+}
+
 /** 관리자: 전체 제출 목록 조회 (페이지네이션/검색/필터) */
 async function fetchSubmissionsAdmin({ page = 1, limit = 20, nickname = '', wasteType = '' } = {}) {
   const params = new URLSearchParams({ page, limit });
   if (nickname) params.set('nickname', nickname);
   if (wasteType) params.set('waste_type', wasteType);
-  try {
-    const res = await fetch(`${API_BASE}/submissions?${params.toString()}`);
-    if (!res.ok) return { data: [], total: 0 };
-    return await res.json();
-  } catch (e) {
-    console.error('fetchSubmissionsAdmin error', e);
-    return { data: [], total: 0 };
+  const res = await fetch(`${API_BASE}/submissions?${params.toString()}`, { credentials: 'include' });
+  if (res.status === 401) {
+    const err = new Error('관리자 인증이 필요합니다.');
+    err.status = 401;
+    throw err;
   }
+  if (!res.ok) return { data: [], total: 0 };
+  return await res.json();
 }
 
 /** 관리자: 레코드 삭제 */
 async function deleteSubmission(id) {
-  const res = await fetch(`${API_BASE}/submissions/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  const res = await fetch(`${API_BASE}/submissions/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  if (res.status === 401) {
+    const err = new Error('관리자 인증이 필요합니다.');
+    err.status = 401;
+    throw err;
+  }
   if (!res.ok) throw new Error('삭제 실패');
+  return await res.json();
+}
+
+/** 관리자: 계산 데이터 엑셀 업로드 */
+async function uploadWasteTypesExcel(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/admin/waste-types/upload`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData
+  });
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    const err = new Error('관리자 인증이 필요합니다.');
+    err.status = 401;
+    throw err;
+  }
+  if (!res.ok) {
+    const err = new Error(json.error || '업로드 실패');
+    err.status = res.status;
+    throw err;
+  }
+  return json;
+}
+
+/** 관리자: 현재 계산 데이터 조회 */
+async function fetchAdminWasteTypes() {
+  const res = await fetch(`${API_BASE}/admin/waste-types`, { credentials: 'include' });
+  if (res.status === 401) {
+    const err = new Error('관리자 인증이 필요합니다.');
+    err.status = 401;
+    throw err;
+  }
+  if (!res.ok) return { data: [] };
   return await res.json();
 }
 
