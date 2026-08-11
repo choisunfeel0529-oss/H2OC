@@ -32,7 +32,7 @@
       <span>스토리에 공유하기</span><span aria-hidden="true">↗</span>
     </button>
     <a href="/ranking" class="btn-primary" id="ranking-btn" style="background:#fff; color:var(--green); border:2px solid var(--green);">
-      <span>내 랭킹 보러 가기</span><span aria-hidden="true">🥇</span>
+      <span>내 랭킹 보러가기</span><span aria-hidden="true">&gt;</span>
     </a>
   </div>
 </div>
@@ -42,24 +42,32 @@
      ================================================================ -->
 <div id="story-card-wrap">
   <div id="story-card">
-    <div class="story-logo-badge heading-font">H<sub>2</sub>OC 계산기</div>
+    <img class="story-logo-badge" src="/static/images/logo-badge.png" alt="H2OC 에이치투오씨 계산기">
+
     <div class="story-nickname heading-font" id="story-nickname">닉네임님</div>
-    <div class="story-sub" id="story-waste">품목 000g</div>
+
+    <div class="story-label" id="story-label">닉네임님의 분리배출량</div>
+    <div class="story-waste-box">
+      <div class="story-waste-list" id="story-waste">품목 000g</div>
+    </div>
 
     <div class="story-stats">
       <div class="story-stat">
-        <div class="story-stat-icon">🌱</div>
-        <div class="story-stat-value heading-font" id="story-carbon">0<span class="story-stat-unit">kg</span></div>
-        <div class="story-stat-label">탄소 저감량 (CO2eq)</div>
+        <div class="story-stat-label"><span class="story-stat-icon">🌱</span> 탄소 저감량</div>
+        <div class="story-stat-value heading-font" id="story-carbon">0</div>
+        <div class="story-stat-unit-line">kg CO2eq</div>
       </div>
       <div class="story-stat">
-        <div class="story-stat-icon">💧</div>
-        <div class="story-stat-value heading-font" id="story-water">0<span class="story-stat-unit">%</span></div>
-        <div class="story-stat-label">수자원 절약</div>
+        <div class="story-stat-label"><span class="story-stat-icon">💧</span> 수자원 절약률</div>
+        <div class="story-stat-value heading-font" id="story-water">0</div>
+        <div class="story-stat-unit-line">%</div>
       </div>
     </div>
 
-    <div class="story-footer">나도 분리배출로 지구를 지켜요 🌍</div>
+    <div class="story-footer">
+      <div class="story-footer-brand heading-font">프로젝트 <span>環生</span></div>
+      <div class="story-footer-handle">@project.hwansaeng</div>
+    </div>
   </div>
 </div>
 
@@ -100,9 +108,10 @@
 
   // ---- 스토리 카드 내용 채우기 ----
   document.getElementById('story-nickname').textContent = result.nickname + '님';
-  document.getElementById('story-waste').textContent = result.waste_label + ' ' + result.weight_g + 'g 분리배출';
-  document.getElementById('story-carbon').innerHTML = result.carbon_kg + '<span class="story-stat-unit">kg</span>';
-  document.getElementById('story-water').innerHTML = waterDisplay + '<span class="story-stat-unit">' + waterUnit + '</span>';
+  document.getElementById('story-label').textContent = result.nickname + '님의 분리배출량';
+  document.getElementById('story-waste').textContent = result.waste_label + ' ' + result.weight_g + 'g';
+  document.getElementById('story-carbon').textContent = result.carbon_kg;
+  document.getElementById('story-water').textContent = waterDisplay;
 
   const shareModal = document.getElementById('share-modal');
   const previewImg = document.getElementById('share-preview-img');

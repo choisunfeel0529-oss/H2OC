@@ -205,11 +205,17 @@ html, body{
 .logo-wrap{
   text-align:center;
   margin-top: 50px;
-  margin-bottom: 60px;
+  margin-bottom: 50px;
 }
 .logo-badge-img{
   width: 100%;
-  max-width: 340px;
+  max-width: 300px;
+  height: auto;
+}
+.project-logo-img{
+  display:block;
+  margin: 14px auto 0;
+  width: 150px;
   height: auto;
 }
 
@@ -222,11 +228,11 @@ html, body{
 .home-menu .btn-white{ padding: 22px 26px; }
 .home-menu .menu-title{ font-size:19px; line-height:1.3; font-family:'Pretendard', sans-serif; font-weight:700; }
 .menu-icon-img{
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   display:inline-block;
-  background-color: var(--green);
+  background-color: #d9d9d9;
   -webkit-mask-image: url('/static/images/icon-math.png');
   mask-image: url('/static/images/icon-math.png');
   -webkit-mask-size: contain;
@@ -237,27 +243,17 @@ html, body{
   mask-position: center;
 }
 .menu-icon-img.rank{
-  background-color: var(--gold);
   -webkit-mask-image: url('/static/images/rank-star.png');
   mask-image: url('/static/images/rank-star.png');
 }
-.project-logo-img{
-  display:block;
-  margin: 24px auto 0;
-  width: 160px;
-  height: auto;
-  opacity: 0.9;
+.menu-icon-img.people{
+  -webkit-mask-image: url('/static/images/icon-people.png');
+  mask-image: url('/static/images/icon-people.png');
 }
-.footer-btn{
-  display:inline-block;
-  border: 1px solid var(--green);
-  color: var(--green-dark);
-  border-radius: var(--radius-pill);
-  padding: 6px 16px;
-  font-size: 12px;
-  text-decoration:none;
-  margin: 4px 4px;
-}
+/* PPT 목업의 강조(하이라이트) 상태 표현: 계산하러가기 카드는 기본으로 강조되어 보임 */
+#go-calculator{ background: var(--green); }
+#go-calculator .menu-title{ color:#fff; }
+#go-calculator .menu-icon-img{ background-color:#fff; }
 
 /* ---------- 폐기물 선택 그리드 ---------- */
 .waste-grid{
@@ -345,26 +341,47 @@ html, body{
 
 /* ---------- 랭킹 화면 ---------- */
 .ranking-hero{
-  background: var(--green);
-  border-radius: 0 0 30px 30px;
-  margin: -28px -24px 0;
-  padding: 70px 24px 28px;
-  color:#fff;
+  margin-top: 56px;
   position: relative;
 }
-.ranking-hero .hero-tag{ font-size:14px; opacity:0.85; margin-bottom:8px; }
-.ranking-hero .hero-title{
+.ranking-hero .hero-tag{
   font-family:'Yeongam', 'Black Han Sans', sans-serif;
-  font-size: 24px;
-  line-height:1.5;
+  font-size:22px;
+  color: var(--text-dark);
+  opacity:1;
+  margin-bottom:14px;
+  padding-left: 4px;
+}
+.ranking-hero .hero-card{
+  background: var(--green);
+  border-radius: var(--radius-card);
+  padding: 22px 24px;
+  color:#fff;
+}
+.hero-summary-list{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.hero-summary-list li{
+  display:flex;
+  align-items:center;
+  gap: 8px;
 }
 .ranking-columns{
   display:flex;
   justify-content:flex-end;
   gap: 34px;
-  margin-top: 22px;
+  margin-top: 14px;
   padding-right: 6px;
-  font-size:18px;
+  font-size:14px;
+  font-weight:700;
+  color: var(--green);
 }
 .section-label{
   font-family:'Yeongam', 'Black Han Sans', sans-serif;
@@ -372,6 +389,13 @@ html, body{
   margin: 26px 0 12px;
   color: var(--text-dark);
 }
+.section-header-row{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+}
+.section-header-row .section-label{ margin-bottom:0; }
+.section-header-row .ranking-columns{ margin-top:0; }
 .rank-row{
   background:#fff;
   border-radius: var(--radius-pill);
@@ -584,6 +608,7 @@ table.admin-table tr:hover td{ background:#fafcf9; }
   max-width: 420px;
   margin: 0 auto;
   min-height: 100vh;
+  position: relative;
   display:flex;
   flex-direction:column;
   justify-content:center;
@@ -626,58 +651,86 @@ table.admin-table tr:hover td{ background:#fafcf9; }
 #story-card{
   width: 1080px;
   height: 1920px;
-  background: linear-gradient(160deg, #389337 0%, #276b26 55%, #17251a 100%);
-  color: #fff;
+  background-color:#f4f4f2;
+  background-image:url('/static/images/paper-bg-new.jpg');
+  background-size: cover;
+  background-position: center top;
+  color: var(--text-dark);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  padding: 120px 90px;
+  padding: 140px 90px;
   box-sizing: border-box;
   font-family:'Pretendard', 'Noto Sans KR', sans-serif;
 }
 .story-logo-badge{
-  font-size: 54px;
-  background: rgba(255,255,255,0.16);
-  padding: 18px 44px;
-  border-radius: 40px;
-  margin-bottom: 90px;
-  letter-spacing: 1px;
+  width: 420px;
+  height: auto;
+  margin-bottom: 70px;
 }
 .story-nickname{
-  font-size: 76px;
+  font-size: 72px;
   text-align:center;
-  margin-bottom: 22px;
+  margin-bottom: 46px;
   line-height:1.3;
+  color: var(--text-dark);
 }
-.story-sub{
-  font-size: 34px;
-  opacity: 0.9;
-  margin-bottom: 100px;
+.story-label{
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 24px;
   text-align:center;
+}
+.story-waste-box{
+  width:100%;
+  background:#fff;
+  border-radius: 44px;
+  padding: 48px 30px;
+  margin-bottom: 90px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.story-waste-list{
+  font-size: 38px;
+  font-weight: 800;
+  text-align:center;
+  line-height: 1.6;
+  white-space: pre-line;
+  color: var(--text-dark);
 }
 .story-stats{
   display:flex;
-  gap: 40px;
+  gap: 30px;
   width: 100%;
-  margin-bottom: 120px;
+  margin-bottom: 90px;
 }
 .story-stat{
   flex:1;
-  background: rgba(255,255,255,0.12);
+  background: #fff;
   border-radius: 44px;
-  padding: 56px 20px;
+  padding: 44px 20px;
+  text-align:center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.story-stat-icon{ font-size: 34px; margin-right: 6px; }
+.story-stat-value{ font-size: 68px; line-height:1; margin: 18px 0 10px; color: var(--text-dark); }
+.story-stat-unit-line{ font-size: 26px; color:#6b756c; font-weight:600; }
+.story-stat-label{ font-size: 28px; color: var(--green); font-weight: 700; display:flex; align-items:center; justify-content:center; }
+.story-footer{
   text-align:center;
 }
-.story-stat-icon{ font-size: 56px; margin-bottom: 20px; }
-.story-stat-value{ font-size: 68px; line-height:1; margin-bottom: 14px; }
-.story-stat-unit{ font-size: 30px; margin-left: 6px; }
-.story-stat-label{ font-size: 26px; opacity:0.85; }
-.story-footer{
-  font-size: 32px;
-  font-weight: 700;
-  opacity: 0.95;
-  text-align:center;
+.story-footer-brand{
+  font-size: 34px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  color: var(--text-dark);
+}
+.story-footer-brand span{ color: var(--green); }
+.story-footer-handle{
+  font-size: 24px;
+  color:#6b756c;
+  font-weight: 600;
 }
 
 /* ---------- 공유 미리보기 모달 ---------- */

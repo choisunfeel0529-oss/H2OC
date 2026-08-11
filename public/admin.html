@@ -10,7 +10,8 @@
 
 <!-- ================= 비밀번호 인증 화면 ================= -->
 <div class="app-shell admin-login-shell" id="admin-login-screen" style="display:none;">
-  <h1 class="page-title heading-font">관리자 비밀번호를<br>입력해주세요</h1>
+  <a href="/" class="back-btn" aria-label="뒤로가기">←</a>
+  <h1 class="page-title heading-font">관리자 코드를<br>입력해 주세요.</h1>
   <form id="admin-login-form" autocomplete="off">
     <input type="password" id="admin-password-input" class="input-pill" placeholder="비밀번호" required>
     <p class="error-text" id="admin-login-error" style="display:none;"></p>
@@ -18,7 +19,6 @@
   <div style="margin-top:24px;">
     <button type="submit" form="admin-login-form" class="btn-primary" id="admin-login-btn">확인</button>
   </div>
-  <p class="footer-link"><a href="/">← 메인으로</a></p>
 </div>
 
 <!-- ================= 관리자 데이터 화면 ================= -->

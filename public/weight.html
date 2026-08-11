@@ -11,11 +11,11 @@
   <a href="/select" class="back-btn" aria-label="뒤로가기">←</a>
 
   <div class="step-indicator heading-font">3 / 3</div>
-  <h1 class="page-title heading-font" id="page-title">분리배출한<br>무게를 입력해주세요</h1>
+  <h1 class="page-title heading-font" id="page-title">무게(g)를<br>입력해 주세요!</h1>
 
   <form id="weight-form" autocomplete="off">
     <div class="input-with-unit">
-      <input type="number" id="weight-input" class="input-pill" placeholder="예) 500" min="1" step="1" inputmode="numeric" required>
+      <input type="number" id="weight-input" class="input-pill" placeholder="예시) 100" min="1" step="1" inputmode="numeric" required>
       <span class="unit-label">g</span>
     </div>
     <p class="error-text" id="error-msg" style="display:none;"></p>
@@ -40,7 +40,7 @@
     const wasteTypes = await fetchWasteTypes();
     const wasteType = getWasteTypeFromList(wasteTypes, wasteCode);
     if (wasteType) {
-      pageTitle.innerHTML = escapeHtml(wasteType.item_name) + ',<br>분리배출한 무게를<br>입력해주세요';
+      pageTitle.innerHTML = escapeHtml(wasteType.item_name) + '의 무게(g)를<br>입력해 주세요!';
     }
   })();
 
