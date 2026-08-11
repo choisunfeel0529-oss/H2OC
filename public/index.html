@@ -5,30 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>H2OC 에이치투오씨 계산기</title>
 <meta name="description" content="플라스틱, 종이, 캔 등 폐기물 분리배출로 절감되는 탄소와 수자원을 계산해보세요.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="app-shell" id="home-screen">
 
   <div class="logo-wrap">
-    <div class="logo-sub heading-font">H<sub style="font-size:0.6em;">2</sub>OC</div>
-    <div class="logo-badge heading-font">에이치투오씨<br>계산기</div>
+    <img class="logo-badge-img" src="/static/images/logo-badge.png" alt="H2OC 에이치투오씨 계산기">
   </div>
 
   <nav class="home-menu" aria-label="메인 메뉴">
     <a href="/login" class="btn-white" id="go-calculator">
       <span class="menu-title">계산하러<br>가기</span>
-      <span class="menu-icon" aria-hidden="true">＋－<br>×÷</span>
+      <span class="menu-icon-img" role="img" aria-label="사칙연산"></span>
     </a>
     <a href="/ranking" class="btn-white" id="go-ranking">
       <span class="menu-title">내 랭킹<br>보러 가기</span>
-      <span class="menu-icon" aria-hidden="true">🥇</span>
+      <span class="menu-icon-img rank" role="img" aria-label="랭킹"></span>
     </a>
   </nav>
 
-  <p class="footer-link"><a href="/ranking">전체 참여 현황 보기</a> ・ <a href="/admin">관리자 데이터 조회</a></p>
+  <p class="footer-link">
+    <a href="/ranking" class="footer-btn">전체 참여 현황 보러 가기</a>
+    <a href="/admin" class="footer-btn">관리자 모드</a>
+  </p>
+  <img class="project-logo-img" src="/static/images/project-logo.png" alt="프로젝트 環生">
 </div>
 
 <script src="/static/data.js"></script>

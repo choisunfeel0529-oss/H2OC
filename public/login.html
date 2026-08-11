@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>닉네임 입력 - H2OC 계산기</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -21,7 +19,7 @@
   </form>
 
   <div style="margin-top:auto;">
-    <button type="submit" form="login-form" class="btn-primary" id="next-btn">다음으로</button>
+    <button type="submit" form="login-form" class="btn-primary" id="next-btn">로그인</button>
   </div>
 </div>
 
@@ -95,7 +93,7 @@
       if (taken) {
         showError('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
         nextBtn.disabled = false;
-        nextBtn.textContent = '다음으로';
+        nextBtn.textContent = '로그인';
         return;
       }
       sessionStorage.setItem(SS_NICKNAME, nickname);
@@ -105,7 +103,7 @@
       console.error(err);
       showError('닉네임 확인 중 오류가 발생했습니다. 다시 시도해주세요.');
       nextBtn.disabled = false;
-      nextBtn.textContent = '다음으로';
+      nextBtn.textContent = '로그인';
     }
   });
 })();
