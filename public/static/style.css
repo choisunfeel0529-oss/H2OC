@@ -201,6 +201,13 @@ html, body{
   margin-top: 16px;
 }
 
+.nickname-notice{
+  color: var(--gray-placeholder);
+  font-size: 13px;
+  text-align:center;
+  margin-top: 12px;
+}
+
 /* ---------- 메인 화면 ---------- */
 .logo-wrap{
   text-align:center;
