@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>폐기물 등록 확인 - H2OC 계산기</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-shell" id="confirm-screen">
+  <a href="/select" class="back-btn" aria-label="뒤로가기">←</a>
+  <a href="/" class="home-btn" aria-label="메인으로">⌂</a>
+
+  <div class="step-indicator heading-font">4 / 4</div>
+  <h1 class="page-title heading-font">폐기물 등록을<br>확인해 주세요!</h1>
+
+  <div class="waste-list" id="waste-list"></div>
+
+  <div class="dual-actions">
+    <button type="button" class="btn-outline" id="add-btn">폐기물 추가하기</button>
+    <button type="button" class="btn-primary" id="calc-btn">계산하기</button>
+  </div>
+</div>
+
+<script src="/static/data.js"></script>
+<script>
+(function () {
+  const nickname = sessionStorage.getItem(SS_NICKNAME);
+  if (!nickname) { window.location.href = '/login'; return; }
+
+  const listEl = document.getElementById('waste-list');
+  const addBtn = document.getElementById('add-btn');
+  const calcBtn = document.getElementById('calc-btn');
+
+  function render() {
+    const list = getWasteList();
+    if (!list.length) {
+      // 등록된 폐기물이 없으면 폐기물 선택부터 다시 시작
+      window.location.href = '/select';
+      return;
+    }
+    listEl.innerHTML = list.map(function (item, idx) {
+      return (
+        '<div class="waste-item">' +
+          '<div class="waste-item-info">' + escapeHtml(item.waste_label) + ' ' + item.weight_g + 'g</div>' +
+          '<div class="waste-item-actions">' +
+            '<button type="button" class="btn-item-edit" data-idx="' + idx + '" data-action="edit">수정</button>' +
+            '<button type="button" class="btn-item-delete" data-idx="' + idx + '" data-action="delete">삭제</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  listEl.addEventListener('click', function (e) {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const idx = parseInt(btn.getAttribute('data-idx'), 10);
+    const action = btn.getAttribute('data-action');
+    const list = getWasteList();
+
+    if (action === 'delete') {
+      list.splice(idx, 1);
+      setWasteList(list);
+      render();
+    } else if (action === 'edit') {
+      const item = list[idx];
+      if (!item) return;
+      sessionStorage.setItem(SS_EDIT_INDEX, String(idx));
+      sessionStorage.setItem(SS_WASTE_CODE, item.waste_code);
+      window.location.href = '/weight';
+    }
+  });
+
+  addBtn.addEventListener('click', function () {
+    sessionStorage.removeItem(SS_WASTE_CODE);
+    sessionStorage.removeItem(SS_EDIT_INDEX);
+    window.location.href = '/select';
+  });
+
+  calcBtn.addEventListener('click', async function () {
+    const list = getWasteList();
+    if (!list.length) return;
+
+    calcBtn.disabled = true;
+    calcBtn.textContent = '계산 중...';
+    addBtn.disabled = true;
+
+    try {
+      const results = [];
+      for (const item of list) {
+        const saved = await createSubmission({
+          nickname: nickname,
+          waste_type: item.waste_code,
+          weight_g: item.weight_g
+        });
+        results.push(saved);
+      }
+      sessionStorage.setItem(SS_RESULT, JSON.stringify({ nickname: nickname, items: results }));
+      clearWasteFlow();
+      window.location.href = '/result';
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || '저장 중 오류가 발생했습니다. 다시 시도해주세요.');
+      calcBtn.disabled = false;
+      calcBtn.textContent = '계산하기';
+      addBtn.disabled = false;
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

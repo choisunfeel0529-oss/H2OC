@@ -215,6 +215,69 @@ html, body{
   justify-content:space-between;
 }
 
+.btn-outline{
+  width:100%;
+  border:2px solid var(--green);
+  background:#fff;
+  color: var(--green);
+  border-radius: var(--radius-pill);
+  padding: 16px 24px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor:pointer;
+  text-align:center;
+  text-decoration:none;
+  display:inline-block;
+}
+.btn-outline:hover{ background: var(--green-light); }
+.btn-outline:active{ transform: scale(0.98); }
+
+.dual-actions{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-top:auto;
+}
+
+/* ---------- 여러 폐기물 등록 확인 목록 ---------- */
+.waste-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-bottom:28px;
+}
+.waste-item{
+  background:#fff;
+  border-radius: var(--radius-card);
+  padding: 16px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+.waste-item-info{
+  font-weight:700;
+  font-size:16px;
+  color: var(--text-dark);
+  flex:1;
+  padding-right:10px;
+}
+.waste-item-actions{
+  display:flex;
+  gap:8px;
+  flex-shrink:0;
+}
+.btn-item-edit, .btn-item-delete{
+  border:none;
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+}
+.btn-item-edit{ background:#e5e7eb; color:#4b5563; }
+.btn-item-delete{ background: var(--green); color:#fff; }
+
 .error-text{
   color: var(--danger);
   font-weight:700;

@@ -8,6 +8,9 @@ const SS_WASTE_CODE = 'h2oc_waste_code';
 const SS_RESULT = 'h2oc_result';
 const LS_LAST_NICKNAME = 'h2oc_last_nickname';
 const LS_DEVICE_ID = 'h2oc_device_id';
+/** 여러 폐기물 한 번에 계산하기: 등록 중인 폐기물 목록 / 수정 중인 항목 인덱스 */
+const SS_WASTE_LIST = 'h2oc_waste_list';
+const SS_EDIT_INDEX = 'h2oc_edit_index';
 
 /**
  * 이 디바이스(브라우저)를 식별하는 고유 ID.
@@ -48,6 +51,30 @@ async function fetchWasteTypes() {
 
 function getWasteTypeFromList(list, code) {
   return list.find(w => w.code === code) || null;
+}
+
+/* ----------------------------------------------------------------
+   여러 폐기물 한 번에 계산하기: 등록 목록(sessionStorage) 공통 헬퍼
+   각 항목: { waste_code, waste_label, weight_g }
+   ---------------------------------------------------------------- */
+function getWasteList() {
+  try {
+    const raw = sessionStorage.getItem(SS_WASTE_LIST);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function setWasteList(list) {
+  sessionStorage.setItem(SS_WASTE_LIST, JSON.stringify(list || []));
+}
+
+function clearWasteFlow() {
+  sessionStorage.removeItem(SS_WASTE_LIST);
+  sessionStorage.removeItem(SS_WASTE_CODE);
+  sessionStorage.removeItem(SS_EDIT_INDEX);
 }
 
 /** 닉네임 중복 확인 (서버, 동일 디바이스 재사용 허용) */

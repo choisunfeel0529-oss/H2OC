@@ -8,10 +8,10 @@
 </head>
 <body>
 <div class="app-shell" id="select-screen">
-  <a href="/login" class="back-btn" aria-label="뒤로가기">←</a>
+  <a href="/login" class="back-btn" id="back-btn" aria-label="뒤로가기">←</a>
   <a href="/" class="home-btn" aria-label="메인으로">⌂</a>
 
-  <div class="step-indicator heading-font">2 / 3</div>
+  <div class="step-indicator heading-font">2 / 4</div>
   <h1 class="page-title heading-font">계산할 폐기물을<br>선택해 주세요!</h1>
 
   <div class="waste-grid" id="waste-grid">
@@ -36,6 +36,11 @@
   const nextBtn = document.getElementById('next-btn');
   let selectedCode = sessionStorage.getItem(SS_WASTE_CODE) || null;
   let wasteTypes = [];
+
+  // 이미 등록된 폐기물이 있는 상태에서 다시 들어온 경우: 뒤로가기는 확인 화면으로
+  if (getWasteList().length > 0) {
+    document.getElementById('back-btn').setAttribute('href', '/confirm');
+  }
 
   function render() {
     if (!wasteTypes.length) {

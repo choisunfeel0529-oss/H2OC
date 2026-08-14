@@ -90,28 +90,63 @@
 (function () {
   const raw = sessionStorage.getItem(SS_RESULT);
   if (!raw) { window.location.href = '/'; return; }
-  let result;
-  try { result = JSON.parse(raw); } catch (e) { window.location.href = '/'; return; }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (e) { window.location.href = '/'; return; }
 
-  // water_percent가 숫자면 %, 아니면(예: "신재 대비 대폭 절감") water_label 텍스트 사용
-  const hasNumericWater = result.water_percent !== null && result.water_percent !== undefined && !isNaN(Number(result.water_percent));
-  const waterDisplay = hasNumericWater ? Math.round(Number(result.water_percent)) : (result.water_label || '-');
+  // SS_RESULT 형식: { nickname, items: [ {waste_label, weight_g, carbon_kg, water_percent, water_label}, ... ] }
+  // 폐기물 1개만 등록한 경우에도 items 배열에 항목 1개로 동일하게 담겨 기존과 동일한 계산/표시 결과를 보장한다.
+  const nickname = parsed.nickname;
+  const items = Array.isArray(parsed.items) ? parsed.items : [];
+  if (!items.length) { window.location.href = '/'; return; }
+
+  // ---- 전체 합산 계산 ----
+  let totalCarbon = 0;
+  let numericWaterSum = 0;
+  let numericWaterCount = 0;
+  const textLabels = [];
+
+  items.forEach(function (item) {
+    totalCarbon += Number(item.carbon_kg) || 0;
+    const hasNumeric = item.water_percent !== null && item.water_percent !== undefined && !isNaN(Number(item.water_percent));
+    if (hasNumeric) {
+      numericWaterSum += Number(item.water_percent);
+      numericWaterCount += 1;
+    } else if (item.water_label) {
+      textLabels.push(item.water_label);
+    }
+  });
+  totalCarbon = Math.round(totalCarbon * 1000) / 1000;
+
+  const hasNumericWater = numericWaterCount > 0;
+  const waterDisplay = hasNumericWater
+    ? Math.round(numericWaterSum / numericWaterCount)
+    : (textLabels[0] || '-');
   const waterUnit = hasNumericWater ? '%' : '';
 
-  document.getElementById('result-title').textContent = escapeHtml(result.nickname) + '님, 멋져요!';
-  document.getElementById('carbon-value').textContent = result.carbon_kg;
+  // ---- 폐기물 목록 텍스트 (한 개면 "품목 000g", 여러 개면 줄바꿈으로 나열) ----
+  const wasteListText = items.map(function (item) {
+    return escapeHtml(item.waste_label) + ' ' + item.weight_g + 'g';
+  }).join('\n');
+
+  document.getElementById('result-title').textContent = escapeHtml(nickname) + '님, 멋져요!';
+  document.getElementById('carbon-value').textContent = totalCarbon;
   document.getElementById('water-value').textContent = waterDisplay;
   document.getElementById('water-unit').textContent = waterUnit;
+
+  const descPrefix = items.length === 1
+    ? (escapeHtml(items[0].waste_label) + ' ' + items[0].weight_g + 'g을')
+    : (wasteListText.replace(/\n/g, '<br>') + '<br>총');
+
   document.getElementById('result-desc').innerHTML =
-    escapeHtml(result.waste_label) + ' ' + result.weight_g + 'g을 분리배출해서<br>' +
-    '<strong>' + result.carbon_kg + 'kg</strong>의 탄소를 줄이고<br>' +
+    descPrefix + ' 분리배출해서<br>' +
+    '<strong>' + totalCarbon + 'kg</strong>의 탄소를 줄이고<br>' +
     '<strong>' + waterDisplay + waterUnit + '</strong>의 수자원을 절약했어요!';
 
   // ---- 스토리 카드 내용 채우기 ----
-  document.getElementById('story-nickname').textContent = result.nickname + '님';
-  document.getElementById('story-label').textContent = result.nickname + '님의 분리배출량';
-  document.getElementById('story-waste').textContent = result.waste_label + ' ' + result.weight_g + 'g';
-  document.getElementById('story-carbon').textContent = result.carbon_kg;
+  document.getElementById('story-nickname').textContent = nickname + '님';
+  document.getElementById('story-label').textContent = nickname + '님의 분리배출량';
+  document.getElementById('story-waste').textContent = wasteListText;
+  document.getElementById('story-carbon').textContent = totalCarbon;
   document.getElementById('story-water').textContent = waterDisplay;
 
   const shareModal = document.getElementById('share-modal');
@@ -122,7 +157,7 @@
   let lastBlob = null;
 
   function fileName() {
-    return 'h2oc_' + result.nickname + '_' + new Date().toISOString().slice(0, 10) + '.png';
+    return 'h2oc_' + nickname + '_' + new Date().toISOString().slice(0, 10) + '.png';
   }
 
   document.getElementById('share-btn').addEventListener('click', async function () {
@@ -162,7 +197,7 @@
               await navigator.share({
                 files: [file],
                 title: 'H2OC 계산기',
-                text: result.nickname + '님의 분리배출 성과! 탄소 ' + result.carbon_kg + 'kg 절감 🌱'
+                text: nickname + '님의 분리배출 성과! 탄소 ' + totalCarbon + 'kg 절감 🌱'
               });
             } catch (e) { /* 사용자 취소 등 */ }
           };

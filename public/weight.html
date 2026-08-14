@@ -8,10 +8,10 @@
 </head>
 <body>
 <div class="app-shell" id="weight-screen">
-  <a href="/select" class="back-btn" aria-label="뒤로가기">←</a>
+  <a href="/select" class="back-btn" id="back-btn" aria-label="뒤로가기">←</a>
   <a href="/" class="home-btn" aria-label="메인으로">⌂</a>
 
-  <div class="step-indicator heading-font">3 / 3</div>
+  <div class="step-indicator heading-font">3 / 4</div>
   <h1 class="page-title heading-font" id="page-title">무게(g)를<br>입력해 주세요!</h1>
 
   <form id="weight-form" autocomplete="off">
@@ -22,8 +22,13 @@
     <p class="error-text" id="error-msg" style="display:none;"></p>
   </form>
 
-  <div style="margin-top:auto;">
+  <div class="dual-actions" id="normal-actions">
+    <button type="button" class="btn-outline" id="add-btn">폐기물 추가하기</button>
     <button type="submit" form="weight-form" class="btn-primary" id="submit-btn">계산하기</button>
+  </div>
+
+  <div class="dual-actions" id="edit-actions" style="display:none;">
+    <button type="submit" form="weight-form" class="btn-primary" id="edit-done-btn">수정 완료</button>
   </div>
 </div>
 
@@ -35,20 +40,42 @@
   if (!nickname) { window.location.href = '/login'; return; }
   if (!wasteCode) { window.location.href = '/select'; return; }
 
-  const pageTitle = document.getElementById('page-title');
+  const editIndexRaw = sessionStorage.getItem(SS_EDIT_INDEX);
+  const isEditing = editIndexRaw !== null && editIndexRaw !== undefined && editIndexRaw !== '';
+  const editIndex = isEditing ? parseInt(editIndexRaw, 10) : -1;
 
+  const pageTitle = document.getElementById('page-title');
+  const normalActions = document.getElementById('normal-actions');
+  const editActions = document.getElementById('edit-actions');
+  const input = document.getElementById('weight-input');
+
+  if (isEditing) {
+    normalActions.style.display = 'none';
+    editActions.style.display = '';
+    document.getElementById('back-btn').setAttribute('href', '/confirm');
+    const list = getWasteList();
+    const item = list[editIndex];
+    if (item) input.value = item.weight_g;
+  } else if (getWasteList().length > 0) {
+    // 이미 등록된 폐기물이 있는 상태에서 추가로 선택해 들어온 경우: 뒤로가기는 확인 화면으로
+    document.getElementById('back-btn').setAttribute('href', '/confirm');
+  }
+
+  let currentWasteLabel = '';
   (async function init() {
     const wasteTypes = await fetchWasteTypes();
     const wasteType = getWasteTypeFromList(wasteTypes, wasteCode);
     if (wasteType) {
+      currentWasteLabel = wasteType.item_name;
       pageTitle.innerHTML = escapeHtml(wasteType.item_name) + '의 무게(g)를<br>입력해 주세요!';
     }
   })();
 
   const form = document.getElementById('weight-form');
-  const input = document.getElementById('weight-input');
   const errorMsg = document.getElementById('error-msg');
+  const addBtn = document.getElementById('add-btn');
   const submitBtn = document.getElementById('submit-btn');
+  const editDoneBtn = document.getElementById('edit-done-btn');
 
   function showError(msg) {
     errorMsg.textContent = msg;
@@ -59,30 +86,83 @@
     errorMsg.textContent = '';
   }
 
-  form.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    clearError();
+  function validWeight() {
     const weightG = Number(input.value);
-
     if (!input.value || !Number.isFinite(weightG) || weightG <= 0) {
       showError('무게는 0보다 큰 숫자로 입력해주세요.');
-      return;
+      return null;
     }
     if (weightG > 1000000) {
       showError('무게 값이 너무 큽니다. 다시 확인해주세요.');
+      return null;
+    }
+    return weightG;
+  }
+
+  // 폐기물 추가하기: 현재 입력값을 목록에 추가하고, 등록 확인 화면(4/4)으로 이동
+  let submitting = false;
+  let submitAction = null; // 'add' | 'calc'
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (submitting) return;
+    clearError();
+    const weightG = validWeight();
+    if (weightG === null) return;
+
+    const list = getWasteList();
+    const newItem = { waste_code: wasteCode, waste_label: currentWasteLabel, weight_g: weightG };
+
+    if (isEditing) {
+      list[editIndex] = newItem;
+      setWasteList(list);
+      sessionStorage.removeItem(SS_EDIT_INDEX);
+      sessionStorage.removeItem(SS_WASTE_CODE);
+      window.location.href = '/confirm';
       return;
     }
 
+    if (submitAction === 'add') {
+      list.push(newItem);
+      setWasteList(list);
+      sessionStorage.removeItem(SS_WASTE_CODE);
+      window.location.href = '/confirm';
+      return;
+    }
+
+    // 계산하기: 현재 항목을 목록에 포함해 전체 제출 진행 (기존 단일 폐기물 흐름 포함)
+    list.push(newItem);
+    setWasteList(list);
+    finalizeAndSubmit(list);
+  });
+
+  addBtn.addEventListener('click', function () {
+    submitAction = 'add';
+    form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
+  });
+
+  submitBtn.addEventListener('click', function () {
+    submitAction = 'calc';
+  });
+
+  async function finalizeAndSubmit(list) {
+    submitting = true;
     submitBtn.disabled = true;
     submitBtn.textContent = '계산 중...';
+    addBtn.disabled = true;
 
     try {
-      const saved = await createSubmission({
-        nickname: nickname,
-        waste_type: wasteCode,
-        weight_g: weightG
-      });
-      sessionStorage.setItem(SS_RESULT, JSON.stringify(saved));
+      const results = [];
+      for (const item of list) {
+        const saved = await createSubmission({
+          nickname: nickname,
+          waste_type: item.waste_code,
+          weight_g: item.weight_g
+        });
+        results.push(saved);
+      }
+      sessionStorage.setItem(SS_RESULT, JSON.stringify({ nickname: nickname, items: results }));
+      clearWasteFlow();
       window.location.href = '/result';
     } catch (err) {
       console.error(err);
@@ -91,10 +171,12 @@
       } else {
         showError(err.message || '저장 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
+      submitting = false;
       submitBtn.disabled = false;
       submitBtn.textContent = '계산하기';
+      addBtn.disabled = false;
     }
-  });
+  }
 })();
 </script>
 </body>

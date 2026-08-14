@@ -12,6 +12,8 @@ import selectHtml from '../public/select.html?raw'
 // @ts-ignore - vite raw import
 import weightHtml from '../public/weight.html?raw'
 // @ts-ignore - vite raw import
+import confirmHtml from '../public/confirm.html?raw'
+// @ts-ignore - vite raw import
 import resultHtml from '../public/result.html?raw'
 // @ts-ignore - vite raw import
 import rankingHtml from '../public/ranking.html?raw'
@@ -38,6 +40,7 @@ app.get('/', (c) => c.html(homeHtml))
 app.get('/login', (c) => c.html(loginHtml))
 app.get('/select', (c) => c.html(selectHtml))
 app.get('/weight', (c) => c.html(weightHtml))
+app.get('/confirm', (c) => c.html(confirmHtml))
 app.get('/result', (c) => c.html(resultHtml))
 app.get('/ranking', (c) => c.html(rankingHtml))
 app.get('/status', (c) => c.html(statusHtml))
