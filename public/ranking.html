@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>랭킹 - H2OC 계산기</title>
+<title>내 랭킹 - H2OC 계산기</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
   <a href="/" class="home-btn" aria-label="메인으로" style="background:rgba(255,255,255,0.9);">⌂</a>
 
   <div class="ranking-hero">
-    <div class="hero-tag heading-font">지금까지</div>
+    <div class="hero-tag heading-font">나의 참여</div>
     <div class="hero-card">
       <ul class="hero-summary-list" id="hero-summary">
         <li>불러오는 중...</li>
@@ -28,9 +28,12 @@
     <div class="rank-list" id="my-rank-row"></div>
   </div>
 
-  <h2 class="section-label heading-font">전체 랭킹</h2>
-  <div class="rank-list" id="rank-list">
-    <p class="loading-msg">랭킹을 불러오는 중...</p>
+  <div id="my-rank-empty" style="display:none;">
+    <p class="empty-msg">아직 참여 데이터가 없습니다.<br>계산을 완료하면 내 랭킹이 표시됩니다.</p>
+  </div>
+
+  <div id="my-rank-guest" style="display:none;">
+    <p class="empty-msg">닉네임 정보가 없습니다.<br>계산을 먼저 진행해주세요.</p>
   </div>
 
   <p class="footer-link"><a href="/login">나도 계산하러 가기</a></p>
@@ -63,37 +66,37 @@
   }
 
   async function load() {
-    const { summary, ranking } = await fetchRanking(100);
-
     const heroEl = document.getElementById('hero-summary');
-    if (summary) {
-      heroEl.innerHTML =
-        '<li>👥 참여자 ' + summary.participant_count + '명</li>' +
-        '<li>🌱 탄소 ' + summary.total_carbon_kg + 'kg 절감</li>' +
-        '<li>💧 평균 수자원 ' + summary.avg_water_percent + '% 절약</li>';
-    } else {
-      heroEl.innerHTML = '<li>아직 참여 데이터가 없어요.</li>';
+
+    if (!myNickname) {
+      heroEl.innerHTML = '<li>닉네임 정보가 없어요.</li>';
+      document.getElementById('my-rank-guest').style.display = '';
+      return;
     }
 
-    const listEl = document.getElementById('rank-list');
-    if (!ranking || ranking.length === 0) {
-      listEl.innerHTML = '<p class="empty-msg">아직 랭킹 데이터가 없습니다.<br>첫 번째 참여자가 되어보세요!</p>';
-    } else {
-      listEl.innerHTML = ranking.map(function (row, i) {
-        return renderRow(i + 1, row, myNickname && row.nickname === myNickname);
-      }).join('');
+    const my = await fetchMyRanking(myNickname);
+
+    if (!my || !my.found) {
+      heroEl.innerHTML = '<li>👤 ' + escapeHtml(myNickname) + '</li><li>아직 참여 데이터가 없어요.</li>';
+      document.getElementById('my-rank-empty').style.display = '';
+      return;
     }
 
-    // 내 랭킹 (Top100 밖일 경우도 별도 조회)
-    if (myNickname) {
-      const my = await fetchMyRanking(myNickname);
-      const section = document.getElementById('my-rank-section');
-      const myRow = document.getElementById('my-rank-row');
-      if (my.found) {
-        section.style.display = '';
-        myRow.innerHTML = renderRow(my.rank, my.data, true);
-      }
-    }
+    const carbon = Math.round((my.data.carbon_kg || 0) * 100) / 100;
+    const hasNumericWater = my.data.water_percent !== null && my.data.water_percent !== undefined && !isNaN(Number(my.data.water_percent));
+    const water = hasNumericWater ? Math.round(Number(my.data.water_percent)) : '-';
+
+    heroEl.innerHTML =
+      '<li>👤 ' + escapeHtml(myNickname) + '</li>' +
+      '<li>🏆 전체 ' + my.total + '명 중 ' + my.rank + '위</li>' +
+      '<li>📝 참여 횟수 ' + (my.data.submit_count || 0) + '회</li>' +
+      '<li>🌱 탄소 ' + carbon + 'kg 절감</li>' +
+      '<li>💧 평균 수자원 ' + water + '% 절약</li>';
+
+    const section = document.getElementById('my-rank-section');
+    const myRow = document.getElementById('my-rank-row');
+    section.style.display = '';
+    myRow.innerHTML = renderRow(my.rank, my.data, true);
   }
 
   load();

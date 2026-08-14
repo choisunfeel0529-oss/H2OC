@@ -16,6 +16,8 @@ import resultHtml from '../public/result.html?raw'
 // @ts-ignore - vite raw import
 import rankingHtml from '../public/ranking.html?raw'
 // @ts-ignore - vite raw import
+import statusHtml from '../public/status.html?raw'
+// @ts-ignore - vite raw import
 import adminHtml from '../public/admin.html?raw'
 
 type Bindings = {
@@ -38,6 +40,7 @@ app.get('/select', (c) => c.html(selectHtml))
 app.get('/weight', (c) => c.html(weightHtml))
 app.get('/result', (c) => c.html(resultHtml))
 app.get('/ranking', (c) => c.html(rankingHtml))
+app.get('/status', (c) => c.html(statusHtml))
 app.get('/admin', (c) => c.html(adminHtml))
 
 // ==================================================================
