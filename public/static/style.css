@@ -475,13 +475,16 @@ html, body{
 }
 .ranking-columns{
   display:flex;
-  justify-content:flex-end;
-  gap: 34px;
+  justify-content:space-between;
+  width: 144px;
   margin-top: 14px;
-  padding-right: 6px;
   font-size:14px;
   font-weight:700;
   color: var(--green);
+}
+.ranking-columns span{
+  width: 64px;
+  text-align:center;
 }
 .section-label{
   font-family:'Yeongam', 'Black Han Sans', sans-serif;
@@ -493,6 +496,7 @@ html, body{
   display:flex;
   align-items:baseline;
   justify-content:space-between;
+  padding-right: 20px;
 }
 .section-header-row .section-label{ margin-bottom:0; }
 .section-header-row .ranking-columns{ margin-top:0; }
@@ -542,11 +546,14 @@ html, body{
 }
 .rank-metrics{
   display:flex;
-  gap: 18px;
+  justify-content:space-between;
+  width: 144px;
   font-weight:700;
   font-size:14px;
-  min-width: 120px;
-  justify-content:flex-end;
+}
+.rank-metrics span{
+  width: 64px;
+  text-align:center;
 }
 .rank-list{ margin-bottom: 30px; }
 .empty-msg{
