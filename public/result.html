@@ -166,13 +166,19 @@
     const originalText = btn.innerHTML;
     btn.innerHTML = '<span>이미지 생성 중...</span>';
 
+    // html2canvas가 border-radius + box-shadow 조합을 캡처할 때 모서리에
+    // 체크무늬 아티팩트를 만드는 렌더링 버그가 있어, 캡처 순간에만 그림자를
+    // 잠시 제거했다가 캡처 후 즉시 복원한다. (화면 디자인/레이아웃은 그대로 유지)
+    const shadowBoxes = document.querySelectorAll('#story-card .story-waste-box, #story-card .story-stat');
+    shadowBoxes.forEach(function (el) { el.classList.add('no-shadow-for-capture'); });
+
     try {
       const cardEl = document.getElementById('story-card');
       const canvas = await html2canvas(cardEl, {
         width: 1080,
         height: 1920,
         scale: 1,
-        backgroundColor: null,
+        backgroundColor: '#f4f4f2',
         useCORS: true
       });
 
@@ -213,6 +219,8 @@
       showToast('이미지 생성 중 오류가 발생했습니다.');
       btn.disabled = false;
       btn.innerHTML = originalText;
+    } finally {
+      shadowBoxes.forEach(function (el) { el.classList.remove('no-shadow-for-capture'); });
     }
   });
 

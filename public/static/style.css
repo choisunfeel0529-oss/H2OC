@@ -77,6 +77,13 @@ html, body{
   padding: 28px 24px 40px;
 }
 
+/* html2canvas는 border-radius + box-shadow 조합을 캡처할 때 모서리에
+   회색/흰색 체크무늬 아티팩트를 만드는 알려진 렌더링 버그가 있다.
+   (https://github.com/niklasvh/html2canvas/issues/1856)
+   캡처 순간에만 이 클래스를 부여해 그림자를 잠시 제거하고,
+   캡처가 끝나면 즉시 제거해 원래 디자인(옅은 그림자)을 그대로 유지한다. */
+.no-shadow-for-capture{ box-shadow: none !important; }
+
 /* ---------- 공통 텍스트 ---------- */
 .heading-font{
   font-family:'Yeongam', 'Black Han Sans', sans-serif;
@@ -98,6 +105,7 @@ html, body{
   text-align: center;
   color: var(--text-dark);
   margin: 6px 0 34px;
+  word-break: keep-all;
 }
 
 .back-btn{
